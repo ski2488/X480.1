@@ -1,0 +1,254 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_3"
+author: "Michael Raminski"
+date: "Thursday, April 06, 2017"
+output: html_document
+---
+
+##Diary
+
+For Task 1 of this assignment, I used the "iris" dataset.
+
+I ran into several issues when building the plots:
+
+-----When using the par function to set parameters, it doesn't appear that the "pch" function is working. I have set "pch=17", which should make all of my dots filled triangles, however, all of my dots are unfill circles (they look like pch=1). Additionally, I'm still not clear on what is being set with the "no.readonly=TRUE" setting.
+
+-----I got the line plot to work, even though it isn't the ideal selection for my data. However, I wasn't able to change the x-axis to use characters (species type) rather than a numerical scale. Then, when I couln't make that change, I couldn't figure out how to hide the x-axis (which would have just been a work around).
+
+-----For my histogram, I couldn't figure out why the x-axis only goes as low as .5- it doesn't go down to 0. I tried to change the "xlim", but that wasn't the answer.
+
+
+For Task 2 of this assignment, I also used the "iris" dataset, along with ggplot examples from Kabacoff Chapter 19. I only had a few issues with the ggplots
+
+-----My line plot is not working, however, the line plot really isn't the ideal plot for this data anyway- the data need to be manipulated to be entered in this format.
+
+-----I had trouble getting the bar plot to graph something other than the count of species
+
+
+Overall, while ggplot will take some getting used to, it seems to be a superior option versus base R. The ggplot graphics are more compelling and the code appears simpler as it seems to take the inputs more directly from the data.
+
+
+##Summary of Results
+
+The graphs gave a great depiction of the data. What stands out is that large difference in the mean and median values (of petal width) between the three species of iris. The violen and box plots take that message to the next level as they also include the range of values. These plots show that the setosa is completely outside the range of the other species, and that there is not a lot of overlap between the versicolor and the virginica (top 25th percentile of the versicolor overlaps with the bottom 25th percentile of the virginica).
+
+
+
+##Assignment
+###Task 1
+
+####Load the "iris" dataset (summary)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summary(iris)
+```
+
+
+####Load the graph settings
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+par(ask=TRUE)
+opar <- par(no.readonly=TRUE) # make a copy of current settings
+par(lty=2, pch=17, cex.axis=1, cex.lab=1.1, cex.main=1.5,cex.sub=1)
+par(opar)
+```
+
+
+####Build a scatter plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+plot(iris$Petal.Length, iris$Petal.Width, 
+     col="purple",
+     main="Regression of Petal Width on Petal Length",
+     xlab="Petal Length",
+     ylab="Petal Width")
+abline(lm(iris$Petal.Width~iris$Petal.Length), col="orange")
+```
+
+
+####Build a line plot (not ideal for data)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+# Find means by Species
+means <- aggregate(iris$Petal.Width, by=list(iris$Species), FUN=mean)
+means <- means[order(means$x),]  
+
+#line plot
+plot(means$x,
+     type="b", 
+     col="purple",
+     main="Average Petal Width by Species",
+     xlab="",
+     ylab="Petal Width",
+     xlim=c(0, 4))
+
+text(means$x,
+     labels = means$Group.1,
+     pos=4, col="red")
+```
+
+
+####Build a bar plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+# vertical barplot
+barplot(means$x, 
+        names.arg = means$Group.1,
+        border = TRUE,
+        axis.lty = 1,
+        col = c("red", "blue", "purple"),
+        main="Average Petal Width by Species",
+        xlab="Species", 
+        ylab="Average Petal Width")
+# horizontal bar plot   
+barplot(means$x, 
+        names.arg = means$Group.1,
+        border = TRUE,
+        axis.lty = 1,
+        col = c("red", "blue", "purple"),
+        main="Average Petal Width by Species", 
+        xlab="Average Petal Width", 
+        ylab="Species", 
+        horiz=TRUE)
+```
+
+
+####Build a histogram (including a rug plot)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+hist(iris$Petal.Width,
+     freq=FALSE, 
+     breaks=20, 
+     #xlim=c(0, 3)
+     col="purple", 
+     xlab="Petal Width", 
+     main="Petal Width Size")
+rug(jitter(iris$Petal.Width)) 
+```
+
+
+####Build a kernel density plot 
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+#All Species
+d <- density(iris$Petal.Width)                                  
+plot(d, 
+     main="Kernel Density of Petal Width",
+     xlab="Petal Width")       
+polygon(d, col="blue", border=NULL)
+
+#Comparison of Species
+library(sm)
+sm.density.compare(iris$Petal.Width, iris$Species, xlab="Petal Width")
+title(main="Petal Width by Species")
+legend("topright", inset = .025, levels(iris$Species), fill=c(2:(2+length(levels(iris$Species)))))
+```
+
+
+####Build a box plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+boxplot(iris$Petal.Width~iris$Species,data=iris,
+        main="Petal Width by Species", 
+        col="yellow",
+        xlab="Species", 
+        ylab="Petal Width")
+```
+
+
+####Build a violin plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+library(vioplot)
+x1 <- iris$Petal.Width[iris$Species=="setosa"] 
+x2 <- iris$Petal.Width[iris$Species=="versicolor"]
+x3 <- iris$Petal.Width[iris$Species=="virginica"]
+vioplot(x1, x2, x3, 
+        names=c("setosa", "versicolor", "virginica"), 
+        col="yellow")
+title("Violin Plots of Petal Width")
+```
+
+
+####Build a dot plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+x <- iris[order(iris$Petal.Width),]                      
+x$species <- factor(x$Species)                                 
+x$color[x$Species=="setosa"] <- "red"                              
+x$color[x$Species=="versicolor"] <- "blue"
+x$color[x$Species=="virginica"] <- "darkgreen" 
+dotchart(x$Petal.Width,
+         labels = row.names(x),                               
+         cex=.7,                                              
+         groups = x$Species,                                       
+         gcolor = "black",
+         color = x$color,
+         main = "Petal Width by Species",
+         xlab = "Petal Width")
+```
+
+
+####Build pie charts (pie chart not ideal for comparison of means - used just as a test!)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+slices <- means$x 
+lbls <- means$Group.1
+
+val <- slices                      
+lbls <- paste(lbls, val) 
+lbls <- paste(lbls,sep="")
+pie(slices,labels = lbls, col=rainbow(length(lbls)),
+    main="Pie Chart with Average Petal Width Comparison")
+```
+
+
+
+
+###Task 2 (ggplot2)
+####Build a scatter plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+library(ggplot2)
+ggplot(data=iris, aes(x=iris$Petal.Length, y=iris$Petal.Width)) +
+  geom_point(pch=17, color="blue", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Regression of Petal Width on Petal Length", x="Petal Length", y="Petal Width")
+```
+
+
+####Build a line plot (not working)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(means, aes(x=means$Group.1, y=means$x)) +
+  geom_line(color="blue", size=2) +
+  labs(title="Average Petal Width by Species", x="Species", y="Petal Width")
+```
+
+
+####Build a bar plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(iris, aes(x=iris$Species)) + 
+  geom_bar(fill="blue") +
+  labs(title="Count of Species", x="Species", y="Count")
+```
+
+
+####Build a histogram
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(iris, aes(x=iris$Petal.Width)) + 
+  geom_histogram(fill="blue") +
+  labs(title="Frequency of Petal Width", x="Petal Width", y="Count")
+```
+
+
+####Build a kernel density plot 
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(iris, aes(x=iris$Petal.Width, fill=iris$Species)) + 
+  geom_density(alpha=.3) +
+  labs(title="Petal Width by Species", x="Species", y="Petal Width", fill="Species")
+```
+
+
+####Build a box plot
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(iris, aes(x=iris$Species, y=iris$Petal.Width)) + 
+  geom_boxplot(fill="yellow") +
+  labs(title="Petal Width by Species", x="Species", y="Petal Width")
+```
+
+
+####Build a violin plot (including box plots inside)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(iris, aes(x=iris$Species, y=iris$Petal.Width)) + 
+  geom_violin(fill="light green") +
+  geom_boxplot(fill="yellow", width=.1) +
+  labs(title="Petal Width by Species", x="Species", y="Petal Width")
+```

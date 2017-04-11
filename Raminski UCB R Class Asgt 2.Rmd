@@ -1,0 +1,182 @@
+---
+title: "Raminski UCB R Class Asgt 2"
+author: "Michael Raminski"
+date: "Friday, March 31, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment, I had trouble with a few items:
+-At first, I could not run the "glimpse" function, but that problem was solved by downloading the "plyr" and "dplyr" packages
+-Then, I could only run the "glimpse" function in an outside console, I couldn't run my markdown file with the glimpse function- it always resulted in an error. However, with the help of peers, I realized that I needed to reload the packages in my R Markdown code
+-This was also the case with the "write_csv" function. I could run that function in an outside console, but I could not run that function in the R Markdown file- it always results in an error. Again, I had to run the function to load the necessary package in order to get the file to knit
+-I'm still struggling a bit with the syntax of the below function (although the function works):
+
+    Import[Import$Year_of_Loss >= 1990,]
+
+    -I don't understand why the "," is necessary after "1990"
+    -I don't understand why I get an error if I write the function as such:
+    
+    Import["Year_of_Loss" >= 1990,]
+    
+
+
+##Summary of Results
+
+Aside from the issues that I noted above, the results of the assignment were mostly as expected. I was even able to try several different approaches to some of the tasks and still got the same results. The one thing that I didn't understand was that when I ran the "write_csv" function, it produced a spreadsheet/dataframe, rather than a single column of comma seperated values. I assume the assignment was asking to reimport the data from a comma seperated value format back to a dataframe format. Therefore, I included the code to do that as well. 
+
+
+
+##Assignment
+
+###Task 2
+
+####Import dataset
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+Import <- read.csv("Aviation.csv")
+```
+######Import <- read.csv("Aviation.csv")
+
+
+
+####Exploring Dataset - Column Names
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+colnames(Import)
+```
+
+
+
+####Exploring Dataset - Dimensions
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+dim(Import)
+```
+
+
+
+####Exploring Dataset - Structure
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+str(Import)
+```
+
+
+
+####Exploring Dataset - Top of dataset
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+head(Import)
+```
+
+
+
+####Exploring Dataset - Bottom of dataset
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+tail(Import)
+```
+
+
+
+####Exploring Dataset - Glimpse
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+library(plyr)
+library(dplyr)
+glimpse(Import)
+```
+
+
+
+###Task 3
+
+####Changing Dataset - Rename columns to 1 through 19
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+colnames(Import) <- c(1:19)
+Import
+```
+
+
+
+####Changing Dataset - Remove columns, only use first 10 columns
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+Import[1:10]
+```
+######Import[1:10]
+###### OR
+######Import[-11:-19]
+
+
+
+####Changing Dataset - Exclude rows by logical test, only show records with a "Year of Loss" of 1990 or after (show only header)
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+Import <- read.csv("Aviation.csv")
+head(Import[Import$Year_of_Loss >= 1990,])
+```
+###### OR
+######Import[Import[2] >= 1990,]
+
+
+###Task 4
+
+####Factors - Change the "stringsasfactors" setting for the "Phase_of_Flight" column (show only the head of results)
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+zz <- data.frame(Import[7], stringsAsFactors = TRUE)
+head(zz)
+```
+
+
+
+####Factors - The data does not appear to be changed by changing the "stringsasfactors" setting
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+zz <- data.frame(Import[7], stringsAsFactors = FALSE)
+head(zz)
+```
+
+
+
+####Factors - Create factors for the "Year_of_Loss" column (show only the head of results)
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+factored <- within(Import[2], {
+  Howold <- NA
+  Howold[Year_of_Loss < 1990] <- "Very Old"
+  Howold[Year_of_Loss >= 1990 & Year_of_Loss <= 2000] <- "Kind of Old"
+  Howold[Year_of_Loss > 2000] <- "New"
+})
+head(factored)
+```
+
+
+
+###Task 5
+
+####Exporting Dataframe to .csv file 
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+write_csv(Import, "Import.csv")
+```
+######write_csv(Import, "Import.csv")
+
+
+
+####Reimporting Dataframe
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+Reimport <- read.csv("Import.csv")
+Reimport
+```
+######Reimport <- read.csv("Import.csv")
+######Reimport
+######OR
+######If data is exported in single-column comma seperated value format (rather than data frame/spreadsheet format)
+######read.table("Import.csv", header=TRUE, sep=";")

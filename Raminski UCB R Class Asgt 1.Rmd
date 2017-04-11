@@ -1,0 +1,146 @@
+---
+title: "Raminski UCB R Class Asgt 1"
+output: html_document
+---
+
+##Diary
+I had some trouble starting the assignment because I was still grasping the concept of a "Markdown" file- format, purpose, how to build, etc.
+
+Additionally, I downloaded MiKTeX, but had some trouble at the beginning generating a Markdown file in Word. Attempting to do so gave me an error message that said that MiKTeX was not installed. However, that seems to have been resolved somehow and now I do have the option of generating a Word Markdown file (although I will submit in html)
+
+
+
+##Summary of Results
+The results generated were largely as expected especially since I had read the materials before completing the assignment.
+
+However, I was still not sure how to summarize the large "Arthritis" table. When I added "results=hide" to the code, I was given an error message. I am still curious about the correct way to either summarize or hide the results entirely.
+
+
+
+##Kabacoff Section 1.8
+
+1. Open the general help, and look at the "Introduction to R" section
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+help.start()
+```
+
+2. Install the vcd package (code not run)
+
+install.packages("vcd")
+
+3. List the functions and datasets available in this package
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+help(package="vcd")
+```
+
+4. Load the package, and read the description of dataset Arthritis
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+library(vcd)
+```
+
+5. Print out the Arthritis dataset
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+Arthritis
+```
+
+6. Run the example that comes with the Arthritis dataset
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+example(Arthritis)
+```
+
+7. Quit (code not run)
+
+q()
+
+
+##Teetor Section 5.1-5.19
+###Section 5.1
+
+Appending a single item in a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+v <- c(1,2,3)
+v <- c(v,4) # Append a single value to v
+v
+```
+
+Appending multiple items in a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+w <- c(5,6,7,8)
+v <- c(v,w) # Append an entire vector to v
+v
+```
+
+Append an items by assigning it to a poistion in a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+v <- c(1,2,3) # Create a vector of three elements
+v[10] <- 10 # Assign to the 10th element
+v # R extends the vector automatically
+```
+
+###Section 5.2
+
+Insert an item into a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+append(1:10, 99, after=5)
+```
+
+Insert an item into a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+append(1:10, 99, after=0)
+```
+
+###Section 5.3
+
+The "recycling rule" - handling vectors of different lengths
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+c (1:3)
+c (1:6)
+(1:6) + (1:3)
+```
+
+Use "cbind" to create column vectors
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+cbind (1:3)
+cbind (1:6)
+cbind((1:6), (1:3))
+```
+
+If shorter vector is not a multiple of the larger vector then R generates a warning
+
+```{r, message=FALSE, error=FALSE}
+(1:5) + (1:6)
+```
+
+Add a scalar value to a vector
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+(1:6) + 10
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
