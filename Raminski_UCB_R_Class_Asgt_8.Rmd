@@ -1,0 +1,435 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_8"
+author: "Michael Raminski"
+date: "Thursday, May 11, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment I used a database featuring the 2016 fantasy football statistics of the top 50 offensive players at each position. 
+
+Data Source:
+https://fantasydata.com/nfl-stats/nfl-fantasy-football-stats.aspx
+
+
+
+##Summary of Results
+
+###Model 1
+For model 1, I performed a logistic regression using a binary outcome- either a player was projected as "Top Tier" or they weren't. I fit a model for each position, with the goal of reducing the AIC and including only significant predictors. Then, I performed an ANOVA test, this showed a significance test telling me whether the variables that I had dropped were providing a material impact on the response. Finally, I applied my model to my dataset and displayed the results in a confusion matrices. 
+
+A few notes about each model:
+QB
+-I chose the second model: qb2. When I fit the thrid model, which dropped another predictor, the AIC went up slightly and the ANOVA test showed some significance that predictive power had been lost. The confusion matrix shows that the model correctly predicts 95% true positives and 60% true negatives.
+
+RB
+-I chose the fifth model: rb5. When I fit the sixth model, which dropped another predictor, the AIC went up slightly and the ANOVA test showed some significance that predictive power had been lost. The confusion matrix shows that the model correctly predicts 95% true positives and 60% true negatives.
+
+WR
+-I chose the fourth model: wr4. Both the AIC and ANOVA tests showed this to be the best model. The confusion matrix shows that the model correctly predicts 100% true positives and 90% true negatives.
+
+TE
+-I chose the third model: te3. Both the AIC and ANOVA tests showed this to be the best model. The confusion matrix shows that the model correctly predicts 95% true positives and 40% true negatives.
+
+
+
+###Model 2
+For model 2, I loaded in a slightly different subset of the data. In this model, rather than looking at statistics on a per-game basis, I looked at the aggregate statistics of the entire season. My goal was to predict the number of touchdowns players would score, assuming that the touchdowns scores would have a poisson distribution (although I would need to think about whether this assumption is truly appropriate). Once I fit my models, looking to include only the siginificant variables, I did a test for overdispersion to see if the data had a greater than expected variability for the poisson regression model. For the positions which showed signs of overdispersion, I refit the models using the quasipoisson regression which fixes for overdispersion.
+
+A few notes about each model:
+QB
+-I chose the fifth model: qb_qp_5. The data showed a significant level of overdispersion so I had to refit using quasipoisson regression. 
+
+RB
+-I chose the sixth model: rb_qp_6. The data showed a significant level of overdispersion so I had to refit using quasipoisson regression. 
+
+WR
+-I chose the sixth model: wr_p_6. The data did not show any sign of overdisperion.
+
+TE
+-I chose the seventh model: te_p_7. The data did not show any sign of overdisperion. However, this model makes no intuitive sense and the lone predictor variable is not even significant.
+
+
+
+##Assignment
+
+
+
+
+####Load packages
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+library(tibble)
+library(Hmisc)
+library(pastecs)
+library(reshape2)
+library(ggplot2)
+library(ggm)
+library(corrgram)
+library(psych)
+library(car)
+library(gvlma)
+library(qcc)
+```
+
+
+
+
+####Import data
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fantasy <- read.csv("fantasy_stats_3.csv")
+fantasy <- tbl_df(fantasy)
+fantasy
+```
+
+
+
+
+####Split the data into 4 data frames by position, eliminate the players toward the bottom of points scored (as this may lead to skew), and select only the most relevant stats for each position. Then sort descending by Fantasy Points per Game and assign a binary variable to identify whether a player is in the top tier of their position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,23:28,37))
+qb <- arrange(qb,desc(Fantasy_PPG))
+qb$Top_Tier[qb$Fantasy_PPG >= 20] <- 1
+qb$Top_Tier[qb$Fantasy_PPG < 20] <- 0
+qb
+
+rb <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,27:33,37))
+rb <- arrange(rb,desc(Fantasy_PPG))
+rb$Top_Tier[rb$Fantasy_PPG >= 14] <- 1
+rb$Top_Tier[rb$Fantasy_PPG < 14] <- 0
+rb
+
+wr <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,32:37))
+wr <- arrange(wr,desc(Fantasy_PPG))
+wr$Top_Tier[wr$Fantasy_PPG >= 10.5] <- 1
+wr$Top_Tier[wr$Fantasy_PPG < 10.5] <- 0
+wr
+
+te <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,32:37))
+te <- arrange(te,desc(Fantasy_PPG))
+te$Top_Tier[te$Fantasy_PPG >= 8] <- 1
+te$Top_Tier[te$Fantasy_PPG < 8] <- 0
+te
+```
+
+
+
+
+###Model 1 - Logistic Regression
+####Modeling
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb1 <- glm(formula = Top_Tier ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio + Rush_Yards_Per_Game + Rush_Attempts_Per_Game, family = binomial, data = qb)
+summary(qb1)
+
+qb2 <- glm(formula = Top_Tier ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio + Rush_Yards_Per_Game, family = binomial, data = qb)
+summary(qb2)
+
+qb3 <- glm(formula = Top_Tier ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio, family = binomial, data = qb)
+summary(qb3)
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rb1 <- glm(formula = Top_Tier ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + I(Touches_Per_Game^2) + Targets_Per_Game + Reception_Percent, family = binomial, data = rb)
+summary(rb1)
+
+rb2 <- glm(formula = Top_Tier ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + Targets_Per_Game + Reception_Percent, family = binomial, data = rb)
+summary(rb2)
+
+rb3 <- glm(formula = Top_Tier ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + Targets_Per_Game, family = binomial, data = rb)
+summary(rb3)
+
+rb4 <- glm(formula = Top_Tier ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game, family = binomial, data = rb)
+summary(rb4)
+
+rb5 <- glm(formula = Top_Tier ~ Rush_Yards_Per_Attempt + Touches_Per_Game, family = binomial, data = rb)
+summary(rb5)
+
+rb6 <- glm(formula = Top_Tier ~ Touches_Per_Game, family = binomial, data = rb)
+summary(rb6)
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wr1 <- glm(formula = Top_Tier ~ Targets_Per_Game + I(Targets_Per_Game^2) + Reception_Percent + Yards_Per_Target + Yards_Per_Reception, family = binomial, data = wr)
+summary(wr1)
+
+wr2 <- glm(formula = Top_Tier ~ Targets_Per_Game + Reception_Percent + Yards_Per_Target + Yards_Per_Reception, family = binomial, data = wr)
+summary(wr2)
+
+wr3 <- glm(formula = Top_Tier ~ Targets_Per_Game + Yards_Per_Target + Yards_Per_Reception, family = binomial, data = wr)
+summary(wr3)
+
+wr4 <- glm(formula = Top_Tier ~ Targets_Per_Game + Yards_Per_Target, family = binomial, data = wr)
+summary(wr4)
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+te1 <- glm(formula = Top_Tier ~ Targets_Per_Game + Reception_Percent + Yards_Per_Target + Yards_Per_Reception, family = binomial, data = te)
+summary(te1)
+
+te2 <- glm(formula = Top_Tier ~ Targets_Per_Game + Reception_Percent + Yards_Per_Reception, family = binomial, data = te)
+summary(te2)
+
+te3 <- glm(formula = Top_Tier ~ Targets_Per_Game + Yards_Per_Reception, family = binomial, data = te)
+summary(te3)
+```
+
+
+
+
+####Testing AIC
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+AIC(qb1, qb2, qb3)
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+AIC(rb1, rb2, rb3, rb4, rb5, rb6)
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+AIC(wr1, wr2, wr3, wr4)
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+AIC(te1, te2, te3)
+```
+
+
+
+
+####Testing ANOVA
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+anova(qb3, qb1, test="Chisq")
+anova(qb3, qb2, test="Chisq")
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+anova(rb6, rb1, test="Chisq")
+anova(rb6, rb2, test="Chisq")
+anova(rb6, rb3, test="Chisq")
+anova(rb6, rb4, test="Chisq")
+anova(rb6, rb5, test="Chisq")
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+anova(wr4, wr1, test="Chisq")
+anova(wr4, wr2, test="Chisq")
+anova(wr4, wr3, test="Chisq")
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+anova(te3, te1, test="Chisq")
+anova(te2, te1, test="Chisq")
+```
+
+
+
+
+####Testing Prediction with Confusion Matrix
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+prob_qb <- predict(qb2, qb, type="response")
+logit.pred_qb <- factor(prob_qb>.5, levels=c(FALSE,TRUE), labels=c(0,1))
+logit.pref_qb <- table(qb$Top_Tier, logit.pred_qb, dnn=c("Actual", "Predicted"))
+logit.pref_qb
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+prob_rb <- predict(rb5, rb, type="response")
+logit.pred_rb <- factor(prob_rb>.5, levels=c(FALSE,TRUE), labels=c(0,1))
+logit.pref_rb <- table(rb$Top_Tier, logit.pred_rb, dnn=c("Actual", "Predicted"))
+logit.pref_rb
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+prob_wr <- predict(wr4, wr, type="response")
+logit.pred_wr <- factor(prob_wr>.5, levels=c(FALSE,TRUE), labels=c(0,1))
+logit.pref_wr <- table(wr$Top_Tier, logit.pred_wr, dnn=c("Actual", "Predicted"))
+logit.pref_wr
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+prob_te <- predict(te3, te, type="response")
+logit.pred_te <- factor(prob_te>.5, levels=c(FALSE,TRUE), labels=c(0,1))
+logit.pref_te <- table(te$Top_Tier, logit.pred_te, dnn=c("Actual", "Predicted"))
+logit.pref_te
+```
+
+
+
+
+
+
+
+
+###Model 2 - Poisson Regression
+####Load new data for season stats rather than per game stats
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb_2 <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,5:14))
+qb_2 <- mutate(qb_2,
+               Total_TD = Pass_TD + Rush_TD)
+qb_2
+
+rb_2 <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,5,12:21))
+rb_2 <- mutate(rb_2,
+               Total_TD = Rush_TD + Receiving_TD)
+rb_2
+
+wr_2 <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,5,14:21))
+wr_2 <- mutate(wr_2,
+               Total_TD = Rush_TD + Receiving_TD)
+wr_2
+
+te_2 <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,5,14:21))
+te_2 <- mutate(te_2,
+               Total_TD = Rush_TD + Receiving_TD)
+te_2
+```
+
+
+
+
+####Modeling
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb_p_1 <- glm(Total_TD ~ Games_Played + Completions + Pass_Attempts + Pass_Yards + Interceptions + Rush_Attempts  + Rush_Yards, data=qb_2, family=poisson())
+summary(qb_p_1)
+
+qb_p_2 <- glm(Total_TD ~ Games_Played + Completions + Pass_Attempts + Pass_Yards + Rush_Attempts + Rush_Yards, data=qb_2, family=poisson())
+summary(qb_p_2)
+
+qb_p_3 <- glm(Total_TD ~ Games_Played + Completions + Pass_Yards + Rush_Attempts + Rush_Yards, data=qb_2, family=poisson())
+summary(qb_p_3)
+
+qb_p_4 <- glm(Total_TD ~ Games_Played + Completions + Pass_Yards + Rush_Yards, data=qb_2, family=poisson())
+summary(qb_p_4)
+
+qb_p_5 <- glm(Total_TD ~ Games_Played + Pass_Yards + Rush_Yards, data=qb_2, family=poisson())
+summary(qb_p_5)
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rb_p_1 <- glm(Total_TD ~ Games_Played + Rush_Attempts + Rush_Yards + Targets + Receptions  + Receiving_Yards	+ Fumbles	+ Fumbles_Lost, data=rb_2, family=poisson())
+summary(rb_p_1)
+
+rb_p_2 <- glm(Total_TD ~ Games_Played + Rush_Attempts + Rush_Yards + Targets + Receptions + Receiving_Yards	+ Fumbles, data=rb_2, family=poisson())
+summary(rb_p_2)
+
+rb_p_3 <- glm(Total_TD ~ Games_Played + Rush_Attempts + Rush_Yards + Targets + Receiving_Yards + Fumbles, data=rb_2, family=poisson())
+summary(rb_p_3)
+
+rb_p_4 <- glm(Total_TD ~ Games_Played + Rush_Attempts + Rush_Yards + Targets + Receiving_Yards, data=rb_2, family=poisson())
+summary(rb_p_4)
+
+rb_p_5 <- glm(Total_TD ~ Rush_Attempts + Rush_Yards + Targets + Receiving_Yards, data=rb_2, family=poisson())
+summary(rb_p_5)
+
+rb_p_6 <- glm(Total_TD ~ Rush_Attempts + Targets + Receiving_Yards, data=rb_2, family=poisson())
+summary(rb_p_6)
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wr_p_1 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions	+ Longest_Reception	+ Receiving_Yards	+ Fumbles	+ Fumbles_Lost, data=wr_2, family=poisson())
+summary(wr_p_1)
+
+wr_p_2 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions	+ Longest_Reception	+ Receiving_Yards	+ Fumbles_Lost, data=wr_2, family=poisson())
+summary(wr_p_2)
+
+wr_p_3 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions  + Longest_Reception	+ Receiving_Yards, data=wr_2, family=poisson())
+summary(wr_p_3)
+
+wr_p_4 <- glm(Total_TD ~ Games_Played  + Receptions  + Longest_Reception  + Receiving_Yards, data=wr_2, family=poisson())
+summary(wr_p_4)
+
+wr_p_5 <- glm(Total_TD ~ Games_Played  + Longest_Reception  + Receiving_Yards, data=wr_2, family=poisson())
+summary(wr_p_5)
+
+wr_p_6 <- glm(Total_TD ~ Longest_Reception  + Receiving_Yards, data=wr_2, family=poisson())
+summary(wr_p_6)
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+te_p_1 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions	+ Longest_Reception	+ Receiving_Yards	+ Fumbles	+ Fumbles_Lost, data=te_2, family=poisson())
+summary(te_p_1)
+
+te_p_2 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions	+ Longest_Reception	+ Receiving_Yards	+ Fumbles, data=te_2, family=poisson())
+summary(te_p_2)
+
+te_p_3 <- glm(Total_TD ~ Games_Played  + Targets  + Receptions  + Receiving_Yards	+ Fumbles, data=te_2, family=poisson())
+summary(te_p_3)
+
+te_p_4 <- glm(Total_TD ~ Targets  + Receptions  + Receiving_Yards  + Fumbles, data=te_2, family=poisson())
+summary(te_p_4)
+
+te_p_5 <- glm(Total_TD ~ Targets  + Receptions  + Fumbles, data=te_2, family=poisson())
+summary(te_p_5)
+
+te_p_6 <- glm(Total_TD ~ Receptions  + Fumbles, data=te_2, family=poisson())
+summary(te_p_6)
+
+te_p_7 <- glm(Total_TD ~ Fumbles, data=te_2, family=poisson())
+summary(te_p_7)
+```
+
+
+
+
+####Testing Overdispersion
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qcc.overdispersion.test(qb_2$Total_TD, type="poisson")
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qcc.overdispersion.test(rb_2$Total_TD, type="poisson")
+```
+
+####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qcc.overdispersion.test(wr_2$Total_TD, type="poisson")
+```
+
+####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qcc.overdispersion.test(te_2$Total_TD, type="poisson")
+```
+
+
+
+
+####Refit models showing evidence of overdispersion
+####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb_qp_5 <- glm(Total_TD ~ Games_Played + Pass_Yards + Rush_Yards, data=qb_2, family=quasipoisson())
+summary(qb_qp_5)
+```
+
+####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rb_qp_6 <- glm(Total_TD ~ Rush_Attempts + Targets + Receiving_Yards, data=rb_2, family=quasipoisson())
+summary(rb_qp_6)
+```
+
+
+

@@ -1,0 +1,436 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_6"
+author: "Michael Raminski"
+date: "Thursday, April 30, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment I used a database featuring the 2016 fantasy football statistics of the top 50 offensive players at each position. 
+
+Data Source:
+https://fantasydata.com/nfl-stats/nfl-fantasy-football-stats.aspx
+
+For some reason when I used "sapply" with both the quantile and the fivenum functions, the results were splightly different. The differences were very small, but I had thought that these functions should be doing the same thing.
+
+Setting "options(digits=3)" didn't seem to take effect on my numbers, they were still resulting in more than three decimals. 
+
+
+
+##Summary of Results
+
+Task 1
+When trying different methods to describe the data, I found that the "describe" and "stat.desc" functions were the most useful. They provide a lot of statistics, as a standard, without having to specifically call for them in the function, which is much more convenient than the base R functions. If I had to choose one function that I like the most it would be the "describe" function (Hmisc package). This is because I really like that it provides various percentiles. In my everyday work, I am always analyzing the percentiles of distributions, and I could immediately see the use of this function!
+
+Task 2
+The box plots provided valuable insights into the data:
+QB- quarterbacks have the largest disparity between the Q1 and Q3 values, that means that it is very important to own a top tier quarterback.
+RB- Running backs have the biggest disparity between the top scorer and the median scorer of any position. That means there is value in getting an elite running back versus just an average back.
+TE- Tight Ends are the lowest scoring position. The distribution of points scored per game between tight ends in almost symmetrical, so it may resemble a normal distribtuion 
+WR- Wide receivers are the only poistion with outliers (at the top). This suggests that there are stand out wide receivers, however, the difference between the top scorers and the median is not as pronounced as quarterbacks and running backs. Additionally, wide receivers have by far the smallest spread of values between Q1 and Q3, meaning there is a large middle tier of wide recievers who are almost interchangable. The violin plots also reinforced this as the showed a very peaked distribution around the median. 
+
+Task 3
+The scatterplots were not very revealing, it seems that the only strong linear relationship was for between points per game and touches per game among running backs. 
+
+I ran the correlations among all variables for each position using each of the pearson, spearman and kendall methods. However, I will focus on the pearson results. The correlation results were interesting, but they were much more compelling looking at the corrgrams. I used various style approaches to the corrgrams, but havent yet found a preference among the options for the lower diagonal. The correlation results were telling, but running the partial correlations was even more interesting because it isolated the variables. I saw some interesting results when running the pcor() function, although I wasn't exactly sure if I should be controlling for all other variables, or controlling only for the variables that I suspected may be related. 
+
+
+
+
+
+##Assignment
+###Task 1
+
+
+
+
+####Load packages and set the number of digits used to 3
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+library(tibble)
+library(Hmisc)
+library(pastecs)
+library(reshape2)
+library(ggplot2)
+library(ggm)
+library(corrgram)
+library(psych)
+options(digits=3)
+```
+
+
+
+
+####Import data
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fantasy <- read.csv("fantasy_stats_3.csv")
+fantasy <- tbl_df(fantasy)
+fantasy
+```
+
+
+
+
+####Split the data into 4 data frames by position, eliminate the players toward the bottom of points scored (as this may lead to skew), and select only the most relevant stats for each position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+qb <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,23:28,37))
+qb
+rb <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,27:33,37))
+rb
+wr <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,32:37))
+wr
+te <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,32:37))
+te
+```
+
+
+
+
+####Describe the data
+#####"summary" function
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summary(qb[,-1])
+summary(rb[,-1])
+summary(wr[,-1])
+summary(te[,-1])
+```
+
+
+
+
+#####"sapply" function
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+sapply(qb[,-1],quantile, na.rm=TRUE)
+sapply(rb[,-1],quantile, na.rm=TRUE)
+sapply(wr[,-1],quantile, na.rm=TRUE)
+sapply(te[,-1],quantile, na.rm=TRUE)
+```
+
+
+
+
+#####"apply" function
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+apply(qb[,-1],2, quantile,na.rm=TRUE)
+apply(rb[,-1],2, quantile,na.rm=TRUE)
+apply(wr[,-1],2, quantile,na.rm=TRUE)
+apply(te[,-1],2, quantile,na.rm=TRUE)
+```
+
+
+
+
+#####"describe" function (Hmisc package)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+describe(qb[,-1])
+describe(rb[,-1])
+describe(wr[,-1])
+describe(te[,-1])
+```
+
+
+
+
+#####"stat.desc" function
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+stat.desc(qb[,-1])
+stat.desc(rb[,-1])
+stat.desc(wr[,-1])
+stat.desc(te[,-1])
+```
+
+
+
+
+#####"describe" function (psych package)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+library(psych)
+describe(qb[,-1])
+describe(rb[,-1])
+describe(wr[,-1])
+describe(te[,-1])
+```
+
+
+
+
+#####"aggregate" function (applied to the entire database and sorted by position)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+aggregate(fantasy["Fantasy_PPG"], by=list(Position=fantasy$Position),mean)
+```
+
+
+
+
+###Task 2
+
+####"filter" function - Split the data into 4 data frames by position, eliminate the players toward the bottom of points scored (as this may lead to skew), and select only the most relevant stats for each position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,23:28,37))
+qb
+rb <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,27:33,37))
+rb
+wr <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,32:37))
+wr
+te <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,32:37))
+te
+```
+
+
+
+
+####"melt" function - Melt each database into columns with rows for each variable
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+head(melt(qb, id="Player"))
+head(melt(rb, id="Player"))
+head(melt(wr, id="Player"))
+head(melt(te, id="Player"))
+```
+
+
+
+
+####"by" function - Show the average points by position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+by(fantasy$Fantasy_PPG,fantasy$Position,mean, na.rm=TRUE)
+```
+
+
+
+
+####Create box plots to show the distribution of points by position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(fantasy, aes(x=fantasy$Position, y=fantasy$Fantasy_PPG)) + 
+  geom_boxplot(fill="green") +
+  labs(title="Fantasy Points per Game by Position", x="Position", y="Points per Game")
+```
+
+
+
+
+####Create violin plots to show the distribution of points by position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(fantasy, aes(x=fantasy$Position, y=fantasy$Fantasy_PPG)) + 
+  geom_violin(fill="light blue") +
+  labs(title="Fantasy Points per Game by Position", x="Position", y="Points per Game")
+```
+
+
+
+
+####Create violin and box plots to show the distribution of points by position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(fantasy, aes(x=fantasy$Position, y=fantasy$Fantasy_PPG)) + 
+  geom_violin(fill="light blue") +
+  geom_boxplot(fill="green", width=.1) +
+  labs(title="Fantasy Points per Game by Position", x="Position", y="Points per Game")
+```
+
+
+
+
+###Task 3
+
+####Scatter plots
+#####Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(qb, aes(x=qb$Pass_Attempts_Per_Game, y=qb$Fantasy_PPG)) +
+  geom_point(pch=17, color="blue", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Pass Attempts", x="Pass Attempts per Game", y="Points per Game")
+
+ggplot(qb, aes(x=qb$Pass_TD_Int_Ratio, y=qb$Fantasy_PPG)) +
+  geom_point(pch=17, color="blue", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Touchdown to Interception Ratio", x="Touchdown to Interception Ratio", y="Points per Game")
+
+ggplot(qb, aes(x=qb$Rush_Attempts_Per_Game, y=qb$Fantasy_PPG)) +
+  geom_point(pch=17, color="blue", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Rush Attempts", x="Rush Attempts", y="Points per Game")
+```
+
+#####Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(rb, aes(x=rb$Rush_Yards_Per_Attempt, y=rb$Fantasy_PPG)) +
+  geom_point(pch=17, color="purple", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Rush Yards Per Attempt", x="Rush Yards Per Attempt", y="Points per Game")
+
+ggplot(rb, aes(x=rb$Touches_Per_Game, y=rb$Fantasy_PPG)) +
+  geom_point(pch=17, color="purple", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Touches Per Game", x="Touches Per Game", y="Points per Game")
+
+ggplot(rb, aes(x=rb$Targets_Per_Game, y=rb$Fantasy_PPG)) +
+  geom_point(pch=17, color="purple", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Targets Per Game", x="Targets Per Game", y="Points per Game")
+```
+
+#####Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(wr, aes(x=wr$Targets_Per_Game, y=wr$Fantasy_PPG)) +
+  geom_point(pch=17, color="black", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Targets Per Game", x="Targets Per Game", y="Points per Game")
+
+ggplot(wr, aes(x=wr$Reception_Percent, y=wr$Fantasy_PPG)) +
+  geom_point(pch=17, color="black", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Reception Percent", x="Reception Percent", y="Points per Game")
+
+ggplot(wr, aes(x=wr$Yards_Per_Target, y=wr$Fantasy_PPG)) +
+  geom_point(pch=17, color="black", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Yards Per Target", x="Yards Per Target", y="Points per Game")
+
+ggplot(wr, aes(x=wr$Yards_Per_Reception, y=wr$Fantasy_PPG)) +
+  geom_point(pch=17, color="black", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Yards Per Reception", x="Yards Per Reception", y="Points per Game")
+```
+
+#####Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ggplot(te, aes(x=te$Targets_Per_Game, y=te$Fantasy_PPG)) +
+  geom_point(pch=17, color="orange", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Targets Per Game", x="Targets Per Game", y="Points per Game")
+
+ggplot(te, aes(x=te$Reception_Percent, y=te$Fantasy_PPG)) +
+  geom_point(pch=17, color="orange", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Reception Percent", x="Reception Percent", y="Points per Game")
+
+ggplot(te, aes(x=te$Yards_Per_Target, y=te$Fantasy_PPG)) +
+  geom_point(pch=17, color="orange", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Yards Per Target", x="Yards Per Target", y="Points per Game")
+
+ggplot(te, aes(x=te$Yards_Per_Reception, y=te$Fantasy_PPG)) +
+  geom_point(pch=17, color="orange", size=2) +
+  geom_smooth(method="lm", color="red", linetype=2) +
+  labs(title="Fantasy Points per Game versus Yards Per Reception", x="Yards Per Reception", y="Points per Game")
+```
+
+
+
+
+####Correlations
+#####Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cor(qb[,-1])
+cor(qb[,-1], method="spearman")
+cor(qb[,-1], method="kendall")
+```
+
+#####Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cor(rb[,-1])
+cor(rb[,-1], method="spearman")
+cor(rb[,-1], method="kendall")
+```
+
+#####Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cor(wr[,-1])
+cor(wr[,-1], method="spearman")
+cor(wr[,-1], method="kendall")
+```
+
+#####Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cor(te[,-1])
+cor(te[,-1], method="spearman")
+cor(te[,-1], method="kendall")
+```
+
+
+
+
+####Corrgrams
+#####Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corrgram(qb[,-1],lower.panel=panel.shade, upper.panel=panel.conf,main="Corrgram of QB Variables")
+```
+
+#####Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corrgram(rb[,-1],lower.panel=panel.ellipse, upper.panel=panel.conf,main="Corrgram of RB Variables")
+```
+
+#####Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corrgram(wr[,-1],lower.panel=panel.pts, upper.panel=panel.conf,main="Corrgram of WR Variables")
+```
+
+#####Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corrgram(te[,-1],lower.panel=panel.pie, upper.panel=panel.conf,main="Corrgram of TE Variables")
+```
+
+
+
+
+####Correlation Test for Significance
+#####Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corr.test(qb[,-1])
+```
+
+#####Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corr.test(rb[,-1])
+```
+
+#####Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corr.test(wr[,-1])
+```
+
+#####Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+corr.test(te[,-1])
+```
+
+
+
+
+####Partial Correlations
+#####Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+colnames(qb[,-1])
+pcor(c(4,7,3), cov(qb[,-1])) #Correlation between Fantasy_PPG and Pass_TD_Int_Ratio, partialing out Pass_TD_Per_Game
+pcor(c(1,7,3), cov(qb[,-1])) #Correlation between Fantasy_PPG and Pass_Attempts_Per_Game, partialing out Pass_TD_Per_Game
+pcor(c(3,7,2), cov(qb[,-1])) #Correlation between Fantasy_PPG and Pass_TD_Per_Game, partialing out Pass_Yards_Per_Game
+```
+
+#####Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+colnames(rb[,-1])
+pcor(c(1,8,4), cov(rb[,-1])) #Correlation between Fantasy_PPG and Rush_Yards_Per_Game, partialing out Rush_TD_Per_Game
+pcor(c(2,8,3), cov(rb[,-1])) #Correlation between Fantasy_PPG and Rush_Attempts_Per_Game, partialing out Rush_Yards_Per_Attempt
+pcor(c(4,8,1), cov(rb[,-1])) #Correlation between Fantasy_PPG and Pass_TD_Per_Game, partialing out Pass_Yards_Per_Game
+pcor(c(4,8,3), cov(rb[,-1])) #Correlation between Fantasy_PPG and Touches_Per_Game, partialing out Rush_Yards_Per_Attempt
+```
+
+#####Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+colnames(wr[,-1])
+pcor(c(1,6,2), cov(wr[,-1])) #Correlation between Fantasy_PPG and Targets_Per_Game, partialing out Reception_Percent
+pcor(c(4,6,1), cov(wr[,-1])) #Correlation between Fantasy_PPG and Yards_Per_Target, partialing out Targets_Per_Game
+pcor(c(1,6,3), cov(wr[,-1])) #Correlation between Fantasy_PPG and Targets_Per_Game, partialing out Reception_TD_Per_Game
+```
+
+#####Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+colnames(te[,-1])
+pcor(c(1,6,2), cov(te[,-1])) #Correlation between Fantasy_PPG and Targets_Per_Game, partialing out Reception_Percent
+pcor(c(4,6,1), cov(te[,-1])) #Correlation between Fantasy_PPG and Yards_Per_Target, partialing out Targets_Per_Game
+pcor(c(1,6,3), cov(te[,-1])) #Correlation between Fantasy_PPG and Targets_Per_Game, partialing out Reception_TD_Per_Game
+```
+

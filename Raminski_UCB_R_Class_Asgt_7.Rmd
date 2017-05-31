@@ -1,0 +1,500 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_7"
+author: "Michael Raminski"
+date: "Thursday, May 4, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment I used a database featuring the 2016 fantasy football statistics of the top 50 offensive players at each position. 
+
+Data Source:
+https://fantasydata.com/nfl-stats/nfl-fantasy-football-stats.aspx
+
+Because of the smaller size of the data set, it is probably not ideal for linear regression, but I wanted to choose a data set that I was both interested in and had familiarity with.
+
+I was very curious when reading section 8.2 of the book (page 177). It is made to seem that the definition of "linear regression" is very broad. Kabacoff says that this formula would still qualify as linear regression:
+Y~ log(X1) + sin(x2)
+This formula being considered linear regression is confusing to me, and the book doesn't adequately describe (at least not adequately for me) how linear regression is actually defined.
+
+Additionally, for the qqPlot, my graph did not seem to be interactive- when I placed my cursor over the plot points, I did not see any labels. Also, when I ran the qqPlot, I was able to produce a graph but the R console would always get stuck (it wouldn't move on to an empty ">" just sat at the "+").
+
+
+##Summary of Results
+
+###Task 1
+For simple linear regression I tried to regress the Fantasy points per game at each position by individual predictor variables that don't result directly in points. This gives the model a more predictive quality rather than looking at the association between points per game and the variables that produce those points.
+
+For polynomial regression, I looked back at the scatterplots that I had created in the last assignment. I was trying to see if there were any plots that looked like they could have a nonlinear or polynomial pattern. I found the following that were candidates:
+QB: Pass_Attempts_Per_Game
+RB: Touches_Per_Game
+WR: Targets_Per_Game
+However, after plotting using the scatterplot with smoother.args, only the RB and WR graphs looked like they may have a quadratic term. Therefore, I performed polynomial regression for RB and WR; both simple linear regression with just a quadratic term and multiple linear regression with the linear and quadratic terms. 
+
+For multiple linear regression, I started the regression at each position with all variables (including quadratic terms for RB and WR). Then, I took out the variables that weren't significant until I found a model with only terms that showed some significance. 
+
+Finally, I wasn't sure why the Cook's distance test (plot(cooks.levels) function) used the cutoff of 4/(n-k-2) rather than the textbook function of 4/(n-k-1).
+
+
+
+
+###Task 2
+For Task 2 I performed various diagnostic tests on my models:
+
+####Multiple diagnostics (base R plot())
+I began by trying the plot() function in base R which produced four charts displaying various diagnostics for each model. I really like the quad-chart produced with this function; however, I also used some of the more advanced plotting techniques so I will speak to the results in those individual plots (below).
+
+
+####Residual values normally distributed with a mean of 0 (qqPlot)
+The qqPlot tests to see if the residuals, and therefore the dependent variable, are normally distributed. My results were as follows:
+QB: All values are very close to the line and within the 95% confidence interval
+RB: The first and last points stray a bit from the line, but are within the 95% confidence interval. This pattern may suggest that my model isn't adequately capturing a quadratic pattern.
+WR: Several points fall outside of the 95% confidence interval, and the pattern suggests that the linear fit is not ideal
+TE: All values are close to the line and within the 95% confidence interval
+
+
+####Homoscedasticity
+The ncvTest function tests to see if there is constant variance using a hypothesis test. My results were as follows:
+QB: Score of .257 - not significant
+RB: Score of .646 - not significant
+WR: Score of .836 - not significant
+TE: Score of .571 - not significant
+
+The spreadLevelPlot function plots to see if the points fall in a random pattern around a horizontal line. My results were as follows:
+QB: Line not horizontal, this is a bit troubling
+RB: Line nearly horizontal, looks good
+WR: Line nearly horizontal, looks good
+TE: Line fairly horizontal, looks ok
+
+The gvlma function performs a test for heteroscadasticity (along with other tests). My results were as follows:
+QB: Assumptions acceptable
+RB: Assumptions acceptable
+WR: Assumptions acceptable
+TE: Assumptions acceptable
+
+
+####No perfect linear relationship between explanatory variables
+The vif function performs a test for multicolinearity and gives a score that we want to see be less than 4. My results were as follows:
+QB: No multicolinearity
+RB: Huge scores for Rush_Attempts_Per_Game, Touches_Per_Game, and Targets_Per_Game. This makes sense as they are all a function of one another
+WR: No multicolinearity
+TE: No multicolinearity
+
+
+####Lack of significant outliers
+The outlierTest function performs a test for outliers and gives a pvalue to indicate significance on the largest residual. My results were as follows:
+QB: No significance
+RB: No significance
+WR: No significance
+TE: No significance
+
+
+####Lack of significant influential observations
+The plot(cooks.levels) function plots the Cook's distance of each point, with points above the cutoff being influential observations. However, Kabacoff suggests a higher cutoff of 1. My results were as follows:
+QB: Point 15 is very influential on the model. Point 25 is above the cutoff but below 1, so it is of some concern
+RB: Point 23 is above the cutoff but below 1, so it is of some concern
+WR: Point 15 is above the cutoff but below 1, so it is of some concern (though well below 1)
+TE: Point 23 is above the cutoff but below 1, so it is of some concern (though well below 1)
+
+
+
+
+##Assignment
+
+
+
+
+####Load packages and set the number of digits used to 3
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+library(tibble)
+library(Hmisc)
+library(pastecs)
+library(reshape2)
+library(ggplot2)
+library(ggm)
+library(corrgram)
+library(psych)
+library(car)
+library(gvlma)
+options(digits=3)
+```
+
+
+
+
+####Import data
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fantasy <- read.csv("fantasy_stats_3.csv")
+fantasy <- tbl_df(fantasy)
+fantasy
+```
+
+
+
+
+####Split the data into 4 data frames by position, eliminate the players toward the bottom of points scored (as this may lead to skew), and select only the most relevant stats for each position
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,23:28,37))
+qb
+rb <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,27:33,37))
+rb
+wr <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,32:37))
+wr
+te <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,32:37))
+te
+```
+
+
+
+
+###Task 1
+####Simple Linear Regression
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_qb_sl1 <- lm(Fantasy_PPG ~ Pass_Attempts_Per_Game, qb)
+summary(fit_qb_sl1)
+
+fit_qb_sl2 <- lm(Fantasy_PPG ~ Pass_TD_Int_Ratio, qb)
+summary(fit_qb_sl2)
+
+fit_qb_sl3 <- lm(Fantasy_PPG ~ Rush_Yards_Per_Game, qb)
+summary(fit_qb_sl3)
+
+fit_qb_sl4 <- lm(Fantasy_PPG ~ Rush_Attempts_Per_Game, qb)
+summary(fit_qb_sl4)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_rb_sl1 <- lm(Fantasy_PPG ~ Rush_Attempts_Per_Game, rb)
+summary(fit_rb_sl1)
+
+fit_rb_sl2 <- lm(Fantasy_PPG ~ Rush_Yards_Per_Attempt, rb)
+summary(fit_rb_sl2)
+
+fit_rb_sl3 <- lm(Fantasy_PPG ~ Touches_Per_Game, rb)
+summary(fit_rb_sl3)
+
+fit_rb_sl4 <- lm(Fantasy_PPG ~ Targets_Per_Game, rb)
+summary(fit_rb_sl4)
+
+fit_rb_sl5 <- lm(Fantasy_PPG ~ Reception_Percent, rb)
+summary(fit_rb_sl5)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_wr_sl1 <- lm(Fantasy_PPG ~ Targets_Per_Game, wr)
+summary(fit_wr_sl1)
+
+fit_wr_sl2 <- lm(Fantasy_PPG ~ Reception_Percent, wr)
+summary(fit_wr_sl2)
+
+fit_wr_sl3 <- lm(Fantasy_PPG ~ Yards_Per_Target, wr)
+summary(fit_wr_sl3)
+
+fit_wr_sl4 <- lm(Fantasy_PPG ~ Yards_Per_Reception, wr)
+summary(fit_wr_sl4)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_te_sl1 <- lm(Fantasy_PPG ~ Targets_Per_Game, te)
+summary(fit_te_sl1)
+
+fit_te_sl2 <- lm(Fantasy_PPG ~ Reception_Percent, te)
+summary(fit_te_sl2)
+
+fit_te_sl3 <- lm(Fantasy_PPG ~ Yards_Per_Target, te)
+summary(fit_te_sl3)
+
+fit_te_sl4 <- lm(Fantasy_PPG ~ Yards_Per_Reception, te)
+summary(fit_te_sl4)
+```
+
+
+
+
+####Polynomial Regression
+#####Investigate potential polynomial relationships
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+scatterplot(Fantasy_PPG ~ Pass_Attempts_Per_Game, qb,
+            spread=FALSE, smoother.args=list(lty=2), pch=19,
+            main="Fantasy Points per Game versus Pass Attempts",
+            xlab="Pass Attempts",
+            ylab="Fantasy Points per Game")
+
+scatterplot(Fantasy_PPG ~ Touches_Per_Game, rb,
+            spread=FALSE, smoother.args=list(lty=2), pch=19,
+            main="Fantasy Points per Game versus Touches",
+            xlab="Touches",
+            ylab="Fantasy Points per Game")
+
+scatterplot(Fantasy_PPG ~ Targets_Per_Game, wr,
+            spread=FALSE, smoother.args=list(lty=2), pch=19,
+            main="Fantasy Points per Game versus Targets",
+            xlab="Targets",
+            ylab="Fantasy Points per Game")
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_rb_p1 <- lm(Fantasy_PPG ~ I(Touches_Per_Game^2), rb)
+summary(fit_rb_p1)
+
+fit_rb_p2 <- lm(Fantasy_PPG ~ Touches_Per_Game + I(Touches_Per_Game^2), rb)
+summary(fit_rb_p2)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_wr_p1 <- lm(Fantasy_PPG ~ I(Targets_Per_Game^2), wr)
+summary(fit_wr_p1)
+
+fit_wr_p2 <- lm(Fantasy_PPG ~ Targets_Per_Game + I(Targets_Per_Game^2), wr)
+summary(fit_wr_p2)
+```
+
+
+
+
+####Multiple Linear Regression
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_qb_ml1 <- lm(Fantasy_PPG ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio + Rush_Yards_Per_Game + Rush_Attempts_Per_Game, qb)
+summary(fit_qb_ml1)
+
+fit_qb_ml2 <- lm(Fantasy_PPG ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio, qb)
+summary(fit_qb_ml2)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_rb_ml1 <- lm(Fantasy_PPG ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + I(Touches_Per_Game^2) + Targets_Per_Game + Reception_Percent, rb)
+summary(fit_rb_ml1)
+
+fit_rb_ml2 <- lm(Fantasy_PPG ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + Targets_Per_Game + Reception_Percent, rb)
+summary(fit_rb_ml2)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_wr_ml1 <- lm(Fantasy_PPG ~ Targets_Per_Game + I(Targets_Per_Game^2) + Reception_Percent + Yards_Per_Target + Yards_Per_Reception, wr)
+summary(fit_wr_ml1)
+
+fit_wr_ml2 <- lm(Fantasy_PPG ~ Targets_Per_Game + I(Targets_Per_Game^2) + Reception_Percent + Yards_Per_Reception, wr)
+summary(fit_wr_ml2)
+
+fit_wr_ml3 <- lm(Fantasy_PPG ~ I(Targets_Per_Game^2) + Reception_Percent + Yards_Per_Reception, wr)
+summary(fit_wr_ml3)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fit_te_ml1 <- lm(Fantasy_PPG ~ Targets_Per_Game + Reception_Percent + Yards_Per_Target + Yards_Per_Reception, te)
+summary(fit_te_ml1)
+
+fit_te_ml2 <- lm(Fantasy_PPG ~ Targets_Per_Game + Yards_Per_Target, te)
+summary(fit_te_ml2)
+```
+
+
+
+
+###Task 2
+####Diagnostic: multiple diagnostics (base R plot())
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+opar <- par(no.readonly=TRUE)
+fit_qb <- lm(Fantasy_PPG ~ Pass_Attempts_Per_Game + Pass_TD_Int_Ratio, qb)
+par(mfrow=c(2,2))
+plot(fit_qb)
+par(opar)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+opar <- par(no.readonly=TRUE)
+fit_rb <- lm(Fantasy_PPG ~ Rush_Attempts_Per_Game + Rush_Yards_Per_Attempt + Touches_Per_Game + Targets_Per_Game + Reception_Percent, rb)
+par(mfrow=c(2,2))
+plot(fit_rb)
+par(opar)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+opar <- par(no.readonly=TRUE)
+fit_wr <- lm(Fantasy_PPG ~ I(Targets_Per_Game^2) + Reception_Percent + Yards_Per_Reception, wr)
+par(mfrow=c(2,2))
+plot(fit_wr)
+par(opar)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+opar <- par(no.readonly=TRUE)
+fit_te <- lm(Fantasy_PPG ~ Targets_Per_Game + Yards_Per_Target, te)
+par(mfrow=c(2,2))
+plot(fit_te)
+par(opar)
+```
+
+
+
+
+####Diagnostic: Residual values normally distributed with a mean of 0 (qqPlot) - meaning dependent variable is normally distributed
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qqPlot(fit_qb_ml2, labels=row.names(qb), id.method="identify",
+       simulate=TRUE, main="Q-Q Plot")
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qqPlot(fit_rb_ml2, labels=row.names(rb), id.method="identify",
+       simulate=TRUE, main="Q-Q Plot")
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qqPlot(fit_wr_ml3, labels=row.names(wr), id.method="identify",
+       simulate=TRUE, main="Q-Q Plot")
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qqPlot(fit_te_ml2, labels=row.names(te), id.method="identify",
+       simulate=TRUE, main="Q-Q Plot")
+```
+
+
+
+
+####Diagnostic: Homoscedasticity
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ncvTest(fit_qb_ml2)
+spreadLevelPlot(fit_qb_ml2)
+
+gv_qb <- gvlma(fit_qb_ml2) 
+summary(gv_qb)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ncvTest(fit_rb_ml2)
+spreadLevelPlot(fit_rb_ml2)
+
+gv_rb <- gvlma(fit_rb_ml2) 
+summary(gv_rb)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ncvTest(fit_wr_ml3)
+spreadLevelPlot(fit_wr_ml3)
+
+gv_wr <- gvlma(fit_wr_ml3) 
+summary(gv_wr)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ncvTest(fit_te_ml2)
+spreadLevelPlot(fit_te_ml2)
+
+gv_te <- gvlma(fit_te_ml2) 
+summary(gv_te)
+```
+
+
+
+
+####Diagnostic: No perfect linear relationship between explanatory variables
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+vif(fit_qb_ml2)
+sqrt(vif(fit_qb_ml2)) > 2
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+vif(fit_rb_ml2)
+sqrt(vif(fit_rb_ml2)) > 2
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+vif(fit_wr_ml3)
+sqrt(vif(fit_wr_ml3)) > 2
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+vif(fit_te_ml2)
+sqrt(vif(fit_te_ml2)) > 2
+```
+
+
+
+
+####Diagnostic: Lack of significant outliers
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+outlierTest(fit_qb_ml2)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+outlierTest(fit_rb_ml2)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+outlierTest(fit_wr_ml3)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+outlierTest(fit_te_ml2)
+```
+
+
+
+
+####Diagnostic: Lack of significant influential observations
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cutoff_qb <- 4/(nrow(qb)-length(fit_qb_ml2$coefficients)-2)
+plot(fit_qb_ml2, which=4, cook.levels=cutoff_qb)
+abline(h=cutoff_qb, lty=2, col="red")
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cutoff_rb <- 4/(nrow(rb)-length(fit_rb_ml2$coefficients)-2)
+plot(fit_rb_ml2, which=4, cook.levels=cutoff_rb)
+abline(h=cutoff_rb, lty=2, col="red")
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cutoff_wr <- 4/(nrow(wr)-length(fit_wr_ml3$coefficients)-2)
+plot(fit_wr_ml3, which=4, cook.levels=cutoff_wr)
+abline(h=cutoff_wr, lty=2, col="red")
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+cutoff_te <- 4/(nrow(te)-length(fit_te_ml2$coefficients)-2)
+plot(fit_te_ml2, which=4, cook.levels=cutoff_te)
+abline(h=cutoff_te, lty=2, col="red")
+```
+
+
+
+

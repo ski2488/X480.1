@@ -1,0 +1,24 @@
+---
+title: "Raminski_Clustering_Distances"
+author: "Michael Raminski"
+date: "Thursday, May 18, 2017"
+output: html_document
+---
+
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+
+```
+
+![Slide 1.](Slide1.png)
+![Slide 2.](Slide2.png)
+![Slide 3.](Slide3.png)
+![Slide 4.](Slide4.png)
+![Slide 5.](Slide5.png)
+![Slide 6.](Slide6.png)
+![Slide 7.](Slide7.png)
+![Slide 8.](Slide8.png)
+![Slide 9.](Slide9.png)
+![Slide 10.](Slide10.png)
+![Slide 11.](Slide11.png)
+

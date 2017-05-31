@@ -1,0 +1,314 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_9"
+author: "Michael Raminski"
+date: "Thursday, May 18, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment I used a database featuring the 2016 fantasy football statistics of the top 50 offensive players at each position. 
+
+Data Source:
+https://fantasydata.com/nfl-stats/nfl-fantasy-football-stats.aspx
+
+With this data set, I addressed assignment item #6d, (clustering models in Kabacoff Capter 16) and tried several methods of hierarchical clustering.
+
+I don't really unnderstand the Hubert Statistic graphs that are being generated (neither how they are being generated nor what they are telling me).
+
+I'm still having trouble with the par() function, which never seems to work for me. I wasn't able to set the charts to layout as a single table rather than a side by side presentation (which makes the final cluster chart difficult to read).
+
+
+
+
+##Summary of Results
+
+I chose to run the hierarchical clustering with two methods: Average linkage and Ward. The average linkage method is a compromise between single linkage (which is prone to chaining) and complete linkage (which can be sensitive to outliers). The Ward method is a very common approach that seems to yield more reliable results. In general, it seemed that the Ward method gave me more sensible results. In the cases of QB, RB and TE, the average linkage method would assign one or several unique clusters to a single player; and a lot of those cases were isolating players that aren't necessarily unique (or at least aren't stand out performers). 
+
+When using the average linkage method, both WR and TE suggested that the ideal number of clusters was only 2. This doesn't make sense with this data, there should be at least 3 tiers of players at each position. So, in both cases, I used the next most suggested number of clusters which was 3. When using Ward's method, for both RB and WR, the suggested number of clusters was also just 2. Again, this doesn't make intuitive sense, so I increased both to 4 (based on the next most suggested number). 
+
+Overall, it didn't seem that either method gave me very sensible results. I would have liked to see more even sized clusters populated by similar performing players. Part of the problem may be that I included too many variables. For each position, I included all variables, even though prior assignments had shown that just a few variables were significant for each position. By doing this, I am giving an even weight to variables that may not be as important as others. I had originally tries using just the significant variables, however, the results did not look reasonable and I don't believe that clustering is ideal for data sets with a limited number of variables. 
+
+
+
+
+##Assignment
+
+
+
+
+####Load packages
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+library(tibble)
+library(Hmisc)
+library(pastecs)
+library(reshape2)
+library(ggplot2)
+library(ggm)
+library(corrgram)
+library(psych)
+library(car)
+library(gvlma)
+library(qcc)
+library(psych)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(pROC)
+library(cluster)
+library(StatMatch)
+library(kknn)
+library(flexclust)
+library(clue)
+library(NbClust)
+```
+
+
+
+
+####Import data
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+fantasy <- read.csv("fantasy_stats_3.csv")
+fantasy
+```
+
+
+
+
+####Split the data into 4 data frames by position, eliminate the players toward the bottom of points scored (as this may lead to skew), and select only the most relevant stats for each position. Then sort descending by Fantasy Points per Game
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- select(filter(fantasy, Position=="QB" & Position_Rank <= 25), c(2,23:28,37))
+qb <- arrange(qb,desc(Fantasy_PPG))
+head(qb)
+
+rb <- select(filter(fantasy, Position=="RB" & Position_Rank <= 40), c(2,27:33,37))
+rb <- arrange(rb,desc(Fantasy_PPG))
+head(rb)
+
+wr <- select(filter(fantasy, Position=="WR" & Position_Rank <= 40), c(2,32:37))
+wr <- arrange(wr,desc(Fantasy_PPG))
+head(wr)
+
+te <- select(filter(fantasy, Position=="TE" & Position_Rank <= 25), c(2,32:37))
+te <- arrange(te,desc(Fantasy_PPG))
+head(te)
+```
+
+
+
+
+####Hierarchical Clustering Results by Position (Average Linkage Method)
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(qb, package="flexclust")
+row.names(qb) <- qb[,1]
+qb.scaled <- scale(qb[,-1])
+d <- dist(qb.scaled)
+fit.average <- hclust(d, method="average")
+plot(fit.average, hang=-1, cex=.8, main="QB - Average Linkage Clustering")
+
+devAskNewPage(ask=TRUE)
+qbnc <- NbClust(qb.scaled, distance="euclidean", min.nc=2, max.nc=15, method="average")
+table(qbnc$Best.n[1,])
+barplot(table(qbnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+qbclusters <- cutree(fit.average, k=5) 
+table(qbclusters)
+aggregate(qb[,-1], by=list(cluster=qbclusters), median) 
+aggregate(as.data.frame(qb.scaled), by=list(cluster=qbclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n5 Cluster Solution")
+rect.hclust(fit.average, k=5)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(rb, package="flexclust")
+row.names(rb) <- rb[,1]
+rb.scaled <- scale(rb[,-1])
+d <- dist(rb.scaled)
+fit.average <- hclust(d, method="average")
+plot(fit.average, hang=-1, cex=.8, main="RB - Average Linkage Clustering")
+
+devAskNewPage(ask=TRUE)
+rbnc <- NbClust(rb.scaled, distance="euclidean", min.nc=2, max.nc=15, method="average")
+table(rbnc$Best.n[1,])
+barplot(table(rbnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+rbclusters <- cutree(fit.average, k=4) 
+table(rbclusters)
+aggregate(rb[,-1], by=list(cluster=rbclusters), median) 
+aggregate(as.data.frame(rb.scaled), by=list(cluster=rbclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n4 Cluster Solution")
+rect.hclust(fit.average, k=4)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(wr, package="flexclust")
+row.names(wr) <- wr[,1]
+wr.scaled <- scale(wr[,-1])
+d <- dist(wr.scaled)
+fit.average <- hclust(d, method="average")
+plot(fit.average, hang=-1, cex=.8, main="WR - Average Linkage Clustering")
+
+devAskNewPage(ask=TRUE)
+wrnc <- NbClust(wr.scaled, distance="euclidean", min.nc=2, max.nc=15, method="average")
+table(wrnc$Best.n[1,])
+barplot(table(wrnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+wrclusters <- cutree(fit.average, k=3) 
+table(wrclusters)
+aggregate(wr[,-1], by=list(cluster=wrclusters), median) 
+aggregate(as.data.frame(wr.scaled), by=list(cluster=wrclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n3 Cluster Solution")
+rect.hclust(fit.average, k=3)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(te, package="flexclust")
+row.names(te) <- te[,1]
+te.scaled <- scale(te[,-1])
+d <- dist(te.scaled)
+fit.average <- hclust(d, method="average")
+plot(fit.average, hang=-1, cex=.8, main="TE - Average Linkage Clustering")
+
+devAskNewPage(ask=TRUE)
+tenc <- NbClust(te.scaled, distance="euclidean", min.nc=2, max.nc=15, method="average")
+table(tenc$Best.n[1,])
+barplot(table(tenc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+teclusters <- cutree(fit.average, k=3) 
+table(teclusters)
+aggregate(te[,-1], by=list(cluster=teclusters), median) 
+aggregate(as.data.frame(te.scaled), by=list(cluster=teclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n3 Cluster Solution")
+rect.hclust(fit.average, k=3)
+```
+
+
+
+
+####Hierarchical Clustering Results by Position (Ward Method)
+#####QB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(qb, package="flexclust")
+row.names(qb) <- qb[,1]
+qb.scaled <- scale(qb[,-1])
+d <- dist(qb.scaled)
+fit.average <- hclust(d, method="ward.D")
+plot(fit.average, hang=-1, cex=.8, main="QB - Ward Clustering")
+
+devAskNewPage(ask=TRUE)
+qbnc <- NbClust(qb.scaled, distance="euclidean", min.nc=2, max.nc=15, method="ward.D")
+table(qbnc$Best.n[1,])
+barplot(table(qbnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+qbclusters <- cutree(fit.average, k=3) 
+table(qbclusters)
+aggregate(qb[,-1], by=list(cluster=qbclusters), median) 
+aggregate(as.data.frame(qb.scaled), by=list(cluster=qbclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n3 Cluster Solution")
+rect.hclust(fit.average, k=3)
+```
+
+#####RB
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(rb, package="flexclust")
+row.names(rb) <- rb[,1]
+rb.scaled <- scale(rb[,-1])
+d <- dist(rb.scaled)
+fit.average <- hclust(d, method="ward.D")
+plot(fit.average, hang=-1, cex=.8, main="RB - Ward Clustering")
+
+devAskNewPage(ask=TRUE)
+rbnc <- NbClust(rb.scaled, distance="euclidean", min.nc=2, max.nc=15, method="ward.D")
+table(rbnc$Best.n[1,])
+barplot(table(rbnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+rbclusters <- cutree(fit.average, k=4) 
+table(rbclusters)
+aggregate(rb[,-1], by=list(cluster=rbclusters), median) 
+aggregate(as.data.frame(rb.scaled), by=list(cluster=rbclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n4 Cluster Solution")
+rect.hclust(fit.average, k=4)
+```
+
+#####WR
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(wr, package="flexclust")
+row.names(wr) <- wr[,1]
+wr.scaled <- scale(wr[,-1])
+d <- dist(wr.scaled)
+fit.average <- hclust(d, method="ward.D")
+plot(fit.average, hang=-1, cex=.8, main="WR - Ward Clustering")
+
+devAskNewPage(ask=TRUE)
+wrnc <- NbClust(wr.scaled, distance="euclidean", min.nc=2, max.nc=15, method="ward.D")
+table(wrnc$Best.n[1,])
+barplot(table(wrnc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+wrclusters <- cutree(fit.average, k=4) 
+table(wrclusters)
+aggregate(wr[,-1], by=list(cluster=wrclusters), median) 
+aggregate(as.data.frame(wr.scaled), by=list(cluster=wrclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n4 Cluster Solution")
+rect.hclust(fit.average, k=4)
+```
+
+#####TE
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+data(te, package="flexclust")
+row.names(te) <- te[,1]
+te.scaled <- scale(te[,-1])
+d <- dist(te.scaled)
+fit.average <- hclust(d, method="ward.D")
+plot(fit.average, hang=-1, cex=.8, main="TE - Ward Clustering")
+
+devAskNewPage(ask=TRUE)
+tenc <- NbClust(te.scaled, distance="euclidean", min.nc=2, max.nc=15, method="ward.D")
+table(tenc$Best.n[1,])
+barplot(table(tenc$Best.n[1,]), 
+        xlab="Number of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen") 
+
+teclusters <- cutree(fit.average, k=4) 
+table(teclusters)
+aggregate(te[,-1], by=list(cluster=teclusters), median) 
+aggregate(as.data.frame(te.scaled), by=list(cluster=teclusters),
+          median)
+plot(fit.average, hang=-1, cex=.8,  
+     main="Average Linkage Clustering\n4 Cluster Solution")
+rect.hclust(fit.average, k=4)
+```

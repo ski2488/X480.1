@@ -1,0 +1,323 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_5"
+author: "Michael Raminski"
+date: "Thursday, April 20, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment, I started by doing some background research on Conway's Game of Life, as I was not familiar with it.
+
+The most confusing part of this game, is the fact that it deals with an infinite plane, even though only a 12 x 12 grid is produced. That makes it impossible to understand how the lives on the border are treated without seeing the squares beyond the grid. 
+
+I didn't find the debugging process to be helpful at all for this assignment, as it did not show any of the results of the variables and tables that were created. Therefore, I had a hard time understanding the results that were expected in each task of this assignment.
+
+I was unable to figure out the code for the last task that would produce the same simulations as the previous run.
+
+##Summary of Results
+
+After testing both codes, I decided to look at the Life4() code. I preferred this code set because it used formulas that were more familiar to me, it was more concise, and it ran more efficiently. 
+
+##Assignment
+
+
+
+####Load packages
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+library(reshape2)
+```
+
+####Load Life 3
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+life3<-function(grid.size=12,start=50,generations=50,slow=FALSE) {
+
+require(reshape2) ###Check for and load the reshape2 package
+
+par(mar=c(1, 1, 4, 1)) ###Set plot margins to small
+
+#####Set up initial population
+
+  init<-sample(c(rep.int(1,times=start),rep.int(0,times=(grid.size^2)-start)),size=grid.size^2,replace=FALSE)
+
+  sim.grid<-matrix(data=init,nrow=grid.size)
+
+#####Function to count neighbours
+
+    neighbours<-function(R,C) {
+      Rs<-c(R-1,R,R+1)
+      Cs<-c(C-1,C,C+1)
+
+      Rs<-ifelse(Rs==0,grid.size,Rs)    #what to do if it's on an edge
+      Rs<-ifelse(Rs==grid.size+1,1,Rs)
+      Cs<-ifelse(Cs==0,grid.size,Cs)
+      Cs<-ifelse(Cs==grid.size+1,1,Cs)
+
+    count<-ifelse(sim.grid[R,C]==1,sum(sim.grid[Rs,Cs])-1,sum(sim.grid[Rs,Cs]))  #count the neighbours. -1 for the one in the middle
+
+  count
+  }
+
+######Loop each generation
+
+  for (i in 1:generations) {
+
+      sim.grid.last<-sim.grid
+
+######Calculate new matrix with number of neighbours
+
+  neighbours.mat<-matrix(data=NA,nrow=grid.size,ncol=grid.size)
+
+  for (p in 1:grid.size){
+    for (q in 1:grid.size){
+      neighbours.mat[p,q]<-neighbours(R=p,C=q)
+    }
+  }
+
+
+#####Generate sim.grid for next generation
+
+sim.grid[sim.grid==0 & neighbours.mat==3]<-1
+sim.grid[sim.grid==1 & neighbours.mat<2]<-0
+sim.grid[sim.grid==1 & neighbours.mat>3]<-0
+
+#####Plot distribution of live cells
+
+plot.mat<-melt(sim.grid)   ## convert matrix into long data frame
+
+plot(plot.mat$Var1[plot.mat$value==1],plot.mat$Var2[plot.mat$value==1],cex=50*1/grid.size,col="steelblue",pch=16,xlim=c(0.5,grid.size+0.5),ylim=c(0.5,grid.size+0.5),xaxs="i",yaxs="i",xaxt="n",yaxt="n",xlab="",ylab="",main=paste("Generation",i))
+
+##Introduce a 0.2 second pause for each iteration if slow=TRUE
+if (slow==TRUE) Sys.sleep(0.2)
+
+
+##If all dead break and show message  
+if(sum(sim.grid)==0) {
+    text(x=grid.size/2,y=grid.size/2,"When you play the game of life,\n you win or you die.\n There is no middle ground",cex=1.5)
+      
+  break
+}
+
+######If steady state break and show message
+if(sum(abs(sim.grid-sim.grid.last))==0) {
+    text(x=grid.size/2,y=grid.size/2, "Unlike the universe,\n The Game of Life\n has reached a steady state",cex=1.5)
+      
+    break
+}
+
+}
+par(mar=c(5, 4, 4, 2) + 0.1)  ##Reset margins
+}
+
+life3()
+```
+
+####Load Life 4
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+life4<-function(grid.size=12,start=50,generations=50,slow=FALSE) {
+
+require(reshape2) ###Check for and load the reshape2 package
+
+par(mar=c(1, 1, 4, 1)) ###Set plot margins to small
+
+#####Set up initial population
+
+  init<-sample(c(rep.int(1,times=start),rep.int(0,times=(grid.size^2)-start)),size=grid.size^2,replace=FALSE)
+
+  sim.grid<-matrix(data=init,nrow=grid.size)
+
+######Loop each generation
+
+  for (i in 1:generations) {
+
+      sim.grid.last<-sim.grid
+
+###Make a stack of new matrices shifted by one in each direction
+
+allW <- cbind(sim.grid[,-1],sim.grid[,1])
+allN <- rbind(sim.grid[-1,],sim.grid[1,])
+allE <- cbind(sim.grid[,grid.size],sim.grid[,-grid.size])
+allS <- rbind(sim.grid[grid.size,],sim.grid[-grid.size,])
+allNW<-rbind(allW[-1,],allW[1,])
+allNE<-rbind(allE[-1,],allE[1,])
+allSW<-rbind(allW[grid.size,],allW[-grid.size,])
+allSE<-rbind(allE[grid.size,],allE[-grid.size,])
+
+###Get the number of neighbours by summing the new matrices
+neighbours.mat <- allW + allNW + allN + allNE + allE + allSE + allS + allSW
+
+
+#####Generate sim.grid for next generation
+
+sim.grid[sim.grid==0 & neighbours.mat==3]<-1
+sim.grid[sim.grid==1 & neighbours.mat<2]<-0
+sim.grid[sim.grid==1 & neighbours.mat>3]<-0
+
+#####Plot distribution of live cells
+
+plot.mat<-melt(sim.grid)   ## convert matrix into long data frame
+
+plot(plot.mat$Var1[plot.mat$value==1],plot.mat$Var2[plot.mat$value==1],cex=50*1/grid.size,col="steelblue",pch=16,xlim=c(0.5,grid.size+0.5),ylim=c(0.5,grid.size+0.5),xaxs="i",yaxs="i",xaxt="n",yaxt="n",xlab="",ylab="",main=paste("Generation",i))
+
+##Introduce a 0.2 second pause for each iteration if slow=TRUE
+if (slow==TRUE) Sys.sleep(0.2)
+
+
+##If all dead break and show message  
+if(sum(sim.grid)==0) {
+    text(x=grid.size/2,y=grid.size/2, 
+      "When you play the game of life,\n you win or you die.\n There is no middle ground",cex=1.5)
+  break
+}
+
+######If steady state break and show message
+if(sum(abs(sim.grid-sim.grid.last))==0) {
+    text(x=grid.size/2,y=grid.size/2, 
+      "Unlike the universe,\n The Game of Life\n has reached a steady state",cex=1.5)
+    break
+}
+
+}
+par(mar=c(5, 4, 4, 2) + 0.1)  ##Reset margins
+}
+
+life4()
+```
+
+
+
+
+###Task 1 - Differences between the two codes - run system time check
+######There are several differences between the two codes. After testing both codes, I decided to look at the Life4() code. I preferred Life4() to Life3() because the code set was shorter and more concise. Additionally, the formulas used in Life4() were more familiar to me (such as cbind, rbind, etc.) Also, Life4() ran quicker when I compared the "system.time" results of both codes. The difference in "system.time" between the codes was not considerable, although, the fact that Life4() ran a little quicker may suggest that the code is more efficient. 
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+system.time(life3())
+system.time(life4())
+```
+
+
+
+###Task 2 - Run the debugger to walk through the code
+######I used the debug() function as well as the "Source" button in order to look through various elements of the code. Using debug(plot) allowed to see the innerworkings of that formula.
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+debug(plot)
+undebug(plot)
+```
+
+
+
+###Task 3 - How does it detect "end of game" conditions
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+
+```
+######If all dead break and show message  
+######if(sum(sim.grid)==0) {
+######text(x=grid.size/2,y=grid.size/2, 
+######           "When you play the game of life,\n you win or you die.\n There is no middle ground",cex=1.5)
+######break
+######
+######If the formula detects that all squares on the grid are empty, or "dead", then it prompts the message "When you play the game of life,\n you win or you die.\n There is no middle ground". This signals the end of the game.
+
+###Task 3 - How does it detect "deadlock" conditions
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+
+```
+######If steady state break and show message
+######if(sum(abs(sim.grid-sim.grid.last))==0) {
+######text(x=grid.size/2,y=grid.size/2, 
+######     "Unlike the universe,\n The Game of Life\n has reached a steady state",cex=1.5)
+######break
+######
+######If the formula detects that all squares on the grid are the same as the last simulation, or "generation", then it prompts the message "Unlike the universe,\n The Game of Life\n has reached a steady state". This signals that the game has reached a stalemate, where additional generations will be exactly the same and will never change.
+
+
+###Task 4 - Why is it convenient to use "melt"
+######Melting makes each row a unique ID-variable combination and puts the data in the proper format to be used in the plot() function, which generates the boards. 
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ 
+```
+
+
+
+###Task 5 - Play with different parameter settings
+######Change the grid size to 15 x 15 and change the generations to 100
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+life5<-function(grid.size=15,start=100,generations=100,slow=FALSE) {
+  
+  require(reshape2) ###Check for and load the reshape2 package
+
+  par(mar=c(1, 1, 4, 1)) ###Set plot margins to small
+  
+  #####Set up initial population
+  
+  init<-sample(c(rep.int(1,times=start),rep.int(0,times=(grid.size^2)-start)),size=grid.size^2,replace=FALSE)
+  
+  sim.grid<-matrix(data=init,nrow=grid.size)
+  
+  ######Loop each generation
+  
+  for (i in 1:generations) {
+    
+    sim.grid.last<-sim.grid
+    
+    ###Make a stack of new matrices shifted by one in each direction
+    
+    allW <- cbind(sim.grid[,-1],sim.grid[,1])
+    allN <- rbind(sim.grid[-1,],sim.grid[1,])
+    allE <- cbind(sim.grid[,grid.size],sim.grid[,-grid.size])
+    allS <- rbind(sim.grid[grid.size,],sim.grid[-grid.size,])
+    allNW<-rbind(allW[-1,],allW[1,])
+    allNE<-rbind(allE[-1,],allE[1,])
+    allSW<-rbind(allW[grid.size,],allW[-grid.size,])
+    allSE<-rbind(allE[grid.size,],allE[-grid.size,])
+    
+    ###Get the number of neighbours by summing the new matrices
+    neighbours.mat <- allW + allNW + allN + allNE + allE + allSE + allS + allSW
+    
+    
+    #####Generate sim.grid for next generation
+    
+    sim.grid[sim.grid==0 & neighbours.mat==3]<-1
+    sim.grid[sim.grid==1 & neighbours.mat<2]<-0
+    sim.grid[sim.grid==1 & neighbours.mat>3]<-0
+    
+    #####Plot distribution of live cells
+    
+    plot.mat<-melt(sim.grid)   ## convert matrix into long data frame
+    
+    plot(plot.mat$Var1[plot.mat$value==1],plot.mat$Var2[plot.mat$value==1],cex=50*1/grid.size,col="steelblue",pch=20,xlim=c(0.5,grid.size+0.5),ylim=c(0.5,grid.size+0.5),xaxs="i",yaxs="i",xaxt="n",yaxt="n",xlab="",ylab="",main=paste("Generation",i))
+    
+    ##Introduce a 0.2 second pause for each iteration if slow=TRUE
+    if (slow==TRUE) Sys.sleep(0.2)
+    
+    
+    ##If all dead break and show message  
+    if(sum(sim.grid)==0) {
+      text(x=grid.size/2,y=grid.size/2, 
+           "When you play the game of life,\n you win or you die.\n There is no middle ground",cex=1.5)
+      break
+    }
+    
+    ######If steady state break and show message
+    if(sum(abs(sim.grid-sim.grid.last))==0) {
+      text(x=grid.size/2,y=grid.size/2, 
+           "Unlike the universe,\n The Game of Life\n has reached a steady state",cex=1.5)
+      break
+    }
+    
+  }
+  par(mar=c(5, 4, 4, 2) + 0.1)  ##Reset margins
+}
+
+life5()
+```
+
+
+
+###Task 6 - How to get it to replay the same game
+######The same game could be replayed if the code was told to start from the same starting board (generation 1) as the last simulation.
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+
+```

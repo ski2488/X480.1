@@ -1,0 +1,407 @@
+---
+title: "Raminski_UCB_R_Class_Asgt_3"
+author: "Michael Raminski"
+date: "Thursday, April 06, 2017"
+output: html_document
+---
+
+##Diary
+
+For this assignment I performed Task 1. For this task, I created a new data set that looks at the 2016 fantasy football statistics for all offensive postion players.
+
+Data Source:
+https://fantasydata.com/nfl-stats/nfl-fantasy-football-stats.aspx
+
+I had trouble loading my dataset, because the statistics that could range over 1,000 (ie. Passing Yards by a quarterback) were interpreted as factors (because values over 1,000 use a comma). When I set stringsasFactors=FALSE, these fields were interpreted as characters. I could not figure out how to convert these values to an integer- every formula I tried would still interpret the values greater than 1,000 as "N/A" rather than an integer. Therefore, I had to go into my csv file and format the values so that they did not use a comma (general format). This fixed the problem, but I would like to know how to fix this by formula rather than manually. 
+
+Additionally, when I tried to show each players ranking under each statistic, I was unable to execute the "order" command. The results showed some kind of a ranking, but the values were not in the proper order.
+
+Finally, when I tried to do my final comparison, the data.frame() command only seemed to work for quarterbacks (as you can see in the "Comparison" column there are some flagged differences). For all other positions, other than qb, the data frames that I built are not showing differences between the "Tier_PPG" and "Tier_Stat" fields. I told the data to join by "Player", but the join isn't working. This isn't the first time that I have had trouble joining datasets using: 
+data.frame(set1,set2, by = "Common Variable")
+I would be interested to know why this isn't working and to know of a better alternative formula.
+
+##Summary of Results
+
+The analysis should show that there are differences in the amount of points a player scored versus the amount of points he would have been expected to score based on underlying metrics. This could indicate that a player is either under/over valued based on simply looking at last year's points scored. 
+
+
+##Assignment
+###Task 1
+
+
+
+
+####Load packages and set the number of digits used to 3
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE, include=FALSE}
+library(readr)
+library(dplyr)
+library(tibble)
+options(digits=3)
+```
+
+
+
+
+####Import data
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fantasy <- read.csv("Fantasy_Stats_2.csv")
+fantasy <- tbl_df(fantasy)
+fantasy
+```
+
+
+
+
+####Add new data fields using "mutate"
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+fantasy <- mutate(fantasy,
+       Pass_Attempts_Per_Game = Pass_Attempts / Games_Played,
+       Pass_Yards_Per_Game = Pass_Yards / Games_Played,
+       Pass_TD_Per_Game = Pass_TD / Games_Played,
+       Pass_TD_Int_Ratio = Pass_TD / Interceptions,
+       Rush_Yards_Per_Game = Rush_Yards / Games_Played,
+       Rush_Attempts_Per_Game = Rush_Attempts / Games_Played,
+       Rush_Yards_Per_Attempt = Rush_Yards / Rush_Attempts,
+       Rush_TD_Per_Game = Rush_TD / Games_Played,
+       Touches_Per_Game = (Rush_Attempts + Receptions) / Games_Played,
+       Targets_Per_Game = Targets / Games_Played,
+       Reception_Percent = Receptions / Targets,
+       Reception_TD_Per_Game = Receiving_TD / Games_Played,
+       Yards_Per_Target = Receiving_Yards / Targets,
+       Yards_Per_Reception = Receiving_Yards / Receptions,
+       Fantasy_PPG = Total_Fantasy_Points / Games_Played)
+fantasy
+```
+
+
+
+
+####Split the data into 4 data frames by position, and select only the most relevant stats for each position
+######Quarterbacks (Change "Inf" and "NaN" values in "Pass_TD_Int_Ratio"- errors for quarterbacks who did not throw an interception)
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- select(filter(fantasy, Position=="QB"), c(2,23:28,37))
+qb$Pass_TD_Int_Ratio[qb$Pass_TD_Int_Ratio == Inf] <- NA
+qb$Pass_TD_Int_Ratio[qb$Pass_TD_Int_Ratio == "NaN"] <- NA
+qb
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rb <- select(filter(fantasy, Position=="RB"), c(2,27:33,37))
+rb
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wr <- select(filter(fantasy, Position=="WR"), c(2,32:37))
+wr
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+te <- select(filter(fantasy, Position=="TE"), c(2,32:37))
+te
+```
+
+
+
+
+####Arrange the data to show players in descending order by points scored per game for each position
+######Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qb <- arrange(qb,desc(Fantasy_PPG))
+qb
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rb <- arrange(rb,desc(Fantasy_PPG))
+rb
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wr <- arrange(wr,desc(Fantasy_PPG))
+wr
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+te <- arrange(te,desc(Fantasy_PPG))
+te
+```
+
+
+
+
+####Look at key statistics for the points scored per game for each position
+######Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summarise(qb,
+          Min_PPG = min(Fantasy_PPG, na.rm=TRUE),
+          Q1 = quantile(Fantasy_PPG, .25, na.rm=TRUE),
+          Average_PPG = mean(Fantasy_PPG, na.rm=TRUE),
+          Median_PPG = median(Fantasy_PPG, na.rm=TRUE),
+          Q3 = quantile(Fantasy_PPG, .75, na.rm=TRUE),
+          Max_PPG = max(Fantasy_PPG, na.rm=TRUE),
+          Stan_Dev = sd(Fantasy_PPG, na.rm=TRUE))
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summarise(rb,
+          Min_PPG = min(Fantasy_PPG, na.rm=TRUE),
+          Q1 = quantile(Fantasy_PPG, .25, na.rm=TRUE),
+          Average_PPG = mean(Fantasy_PPG, na.rm=TRUE),
+          Median_PPG = median(Fantasy_PPG, na.rm=TRUE),
+          Q3 = quantile(Fantasy_PPG, .75, na.rm=TRUE),
+          Max_PPG = max(Fantasy_PPG, na.rm=TRUE),
+          Stan_Dev = sd(Fantasy_PPG, na.rm=TRUE))
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summarise(wr,
+          Min_PPG = min(Fantasy_PPG, na.rm=TRUE),
+          Q1 = quantile(Fantasy_PPG, .25, na.rm=TRUE),
+          Average_PPG = mean(Fantasy_PPG, na.rm=TRUE),
+          Median_PPG = median(Fantasy_PPG, na.rm=TRUE),
+          Q3 = quantile(Fantasy_PPG, .75, na.rm=TRUE),
+          Max_PPG = max(Fantasy_PPG, na.rm=TRUE),
+          Stan_Dev = sd(Fantasy_PPG, na.rm=TRUE))
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+summarise(te,
+          Min_PPG = min(Fantasy_PPG, na.rm=TRUE),
+          Q1 = quantile(Fantasy_PPG, .25, na.rm=TRUE),
+          Average_PPG = mean(Fantasy_PPG, na.rm=TRUE),
+          Median_PPG = median(Fantasy_PPG, na.rm=TRUE),
+          Q3 = quantile(Fantasy_PPG, .75, na.rm=TRUE),
+          Max_PPG = max(Fantasy_PPG, na.rm=TRUE),
+          Stan_Dev = sd(Fantasy_PPG, na.rm=TRUE))
+```
+
+
+
+
+####Look at the points scored per game. Then, scale the results and assign players to Tier 1 - Tier 4.
+######Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ppgcutoff <- quantile(qb$Fantasy_PPG, c(.9,.7,.5), na.rm = TRUE)
+ppgcutoff
+
+qb$Tier_PPG[qb$Fantasy_PPG >= ppgcutoff[1]] <- "Tier 1"
+qb$Tier_PPG[qb$Fantasy_PPG < ppgcutoff[1] & qb$Fantasy_PPG >= ppgcutoff[2]] <- "Tier 2"
+qb$Tier_PPG[qb$Fantasy_PPG < ppgcutoff[2] & qb$Fantasy_PPG >= ppgcutoff[3]] <- "Tier 3"
+qb$Tier_PPG[qb$Fantasy_PPG < ppgcutoff[3]] <- "Tier 4"
+
+qb <- arrange(qb,desc(Fantasy_PPG))
+qbppg <- qb[,-2:-8]
+qbppg
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ppgcutoff <- quantile(rb$Fantasy_PPG, c(.9,.7,.5), na.rm = TRUE)
+ppgcutoff
+
+rb$Tier_PPG[rb$Fantasy_PPG >= ppgcutoff[1]] <- "Tier 1"
+rb$Tier_PPG[rb$Fantasy_PPG < ppgcutoff[1] & rb$Fantasy_PPG >= ppgcutoff[2]] <- "Tier 2"
+rb$Tier_PPG[rb$Fantasy_PPG < ppgcutoff[2] & rb$Fantasy_PPG >= ppgcutoff[3]] <- "Tier 3"
+rb$Tier_PPG[rb$Fantasy_PPG < ppgcutoff[3]] <- "Tier 4"
+
+rb <- arrange(rb,desc(Fantasy_PPG))
+rbppg <- rb[,-2:-9]
+rbppg
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ppgcutoff <- quantile(wr$Fantasy_PPG, c(.9,.7,.5), na.rm = TRUE)
+ppgcutoff
+
+wr$Tier_PPG[wr$Fantasy_PPG >= ppgcutoff[1]] <- "Tier 1"
+wr$Tier_PPG[wr$Fantasy_PPG < ppgcutoff[1] & wr$Fantasy_PPG >= ppgcutoff[2]] <- "Tier 2"
+wr$Tier_PPG[wr$Fantasy_PPG < ppgcutoff[2] & wr$Fantasy_PPG >= ppgcutoff[3]] <- "Tier 3"
+wr$Tier_PPG[wr$Fantasy_PPG < ppgcutoff[3]] <- "Tier 4"
+
+wr <- arrange(wr,desc(Fantasy_PPG))
+wrppg <- wr[,-2:-7]
+wrppg
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+ppgcutoff <- quantile(te$Fantasy_PPG, c(.9,.7,.5), na.rm = TRUE)
+ppgcutoff
+
+te$Tier_PPG[te$Fantasy_PPG >= ppgcutoff[1]] <- "Tier 1"
+te$Tier_PPG[te$Fantasy_PPG < ppgcutoff[1] & te$Fantasy_PPG >= ppgcutoff[2]] <- "Tier 2"
+te$Tier_PPG[te$Fantasy_PPG < ppgcutoff[2] & te$Fantasy_PPG >= ppgcutoff[3]] <- "Tier 3"
+te$Tier_PPG[te$Fantasy_PPG < ppgcutoff[3]] <- "Tier 4"
+
+te <- arrange(te,desc(Fantasy_PPG))
+teppg <- te[,-2:-7]
+teppg
+```
+
+
+
+
+####Look at metrics for which players do not directly receive points as an alternate predictor to looking just at the points scored per game. Then, scale the results and produce a weighted average of the scaled values. Finally, assign players to Tier 1 - Tier 4.
+######Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qbscale <- data.frame(scale(qb[,2:8]))
+qbscale <- mutate(qbscale,
+             Weighted_Score = 
+               (Pass_Attempts_Per_Game*.40) +  
+               (Pass_TD_Int_Ratio*.50) + 
+               (Rush_Attempts_Per_Game*.10))
+
+qbscale <- tbl_df(qbscale)
+
+tiercutoff <- quantile(qbscale$Weighted_Score, c(.9,.7,.5), na.rm = TRUE)
+tiercutoff
+
+qbscale$Tier_Stat[qbscale$Weighted_Score >= tiercutoff[1]] <- "Tier 1"
+qbscale$Tier_Stat[qbscale$Weighted_Score < tiercutoff[1] & qbscale$Weighted_Score >= tiercutoff[2]] <- "Tier 2"
+qbscale$Tier_Stat[qbscale$Weighted_Score < tiercutoff[2] & qbscale$Weighted_Score >= tiercutoff[3]] <- "Tier 3"
+qbscale$Tier_Stat[qbscale$Weighted_Score < tiercutoff[3]] <- "Tier 4"
+
+qb <- cbind(qb[,1], qbscale)
+qb <- tbl_df(qb)
+qb <- arrange(qb,desc(Weighted_Score))
+qb <- qb[,-2:-9]
+qb
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rbscale <- data.frame(scale(rb[,2:8]))
+rbscale <- mutate(rbscale,
+             Weighted_Score = 
+               (Rush_Yards_Per_Attempt*.25) +  
+               (Touches_Per_Game*.60) + 
+               (Targets_Per_Game*.10) + 
+               (Reception_Percent*.05))
+
+rbscale <- tbl_df(rbscale)
+
+tiercutoff <- quantile(rbscale$Weighted_Score, c(.9,.7,.5), na.rm = TRUE)
+tiercutoff
+
+rbscale$Tier_Stat[rbscale$Weighted_Score >= tiercutoff[1]] <- "Tier 1"
+rbscale$Tier_Stat[rbscale$Weighted_Score < tiercutoff[1] & rbscale$Weighted_Score >= tiercutoff[2]] <- "Tier 2"
+rbscale$Tier_Stat[rbscale$Weighted_Score < tiercutoff[2] & rbscale$Weighted_Score >= tiercutoff[3]] <- "Tier 3"
+rbscale$Tier_Stat[rbscale$Weighted_Score < tiercutoff[3]] <- "Tier 4"
+
+rb <- cbind(rb[,1], rbscale)
+rb <- tbl_df(rb)
+rb <- arrange(rb,desc(Weighted_Score))
+rb <- rb[,-2:-9]
+rb
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wrscale <- data.frame(scale(wr[,2:7]))
+wrscale <- mutate(wrscale,
+                  Weighted_Score = 
+                    (Targets_Per_Game*.35) + 
+                    (Reception_Percent*.30) + 
+                    (Yards_Per_Target*.15) + 
+                    (Yards_Per_Reception*.20))
+
+wrscale <- tbl_df(wrscale)
+
+tiercutoff <- quantile(wrscale$Weighted_Score, c(.9,.7,.5), na.rm = TRUE)
+tiercutoff
+
+wrscale$Tier_Stat[wrscale$Weighted_Score >= tiercutoff[1]] <- "Tier 1"
+wrscale$Tier_Stat[wrscale$Weighted_Score < tiercutoff[1] & wrscale$Weighted_Score >= tiercutoff[2]] <- "Tier 2"
+wrscale$Tier_Stat[wrscale$Weighted_Score < tiercutoff[2] & wrscale$Weighted_Score >= tiercutoff[3]] <- "Tier 3"
+wrscale$Tier_Stat[wrscale$Weighted_Score < tiercutoff[3]] <- "Tier 4"
+
+wr <- cbind(wr[,1], wrscale)
+wr <- tbl_df(wr)
+wr <- arrange(wr,desc(Weighted_Score))
+wr <- wr[,-2:-8]
+wr
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+tescale <- data.frame(scale(te[,2:7]))
+tescale <- mutate(tescale,
+                  Weighted_Score = 
+                    (Targets_Per_Game*.50) + 
+                    (Reception_Percent*.30) + 
+                    (Yards_Per_Target*.10) + 
+                    (Yards_Per_Reception*.10))
+
+tescale <- tbl_df(tescale)
+
+tiercutoff <- quantile(tescale$Weighted_Score, c(.9,.7,.5), na.rm = TRUE)
+tiercutoff
+
+tescale$Tier_Stat[tescale$Weighted_Score >= tiercutoff[1]] <- "Tier 1"
+tescale$Tier_Stat[tescale$Weighted_Score < tiercutoff[1] & tescale$Weighted_Score >= tiercutoff[2]] <- "Tier 2"
+tescale$Tier_Stat[tescale$Weighted_Score < tiercutoff[2] & tescale$Weighted_Score >= tiercutoff[3]] <- "Tier 3"
+tescale$Tier_Stat[tescale$Weighted_Score < tiercutoff[3]] <- "Tier 4"
+
+te <- cbind(te[,1], tescale)
+te <- tbl_df(te)
+te <- arrange(te,desc(Weighted_Score))
+te <- te[,-2:-8]
+te
+```
+
+
+
+
+####Compare the tiers assigned by points per game vs non-point-scoring statistics (Add "Comparison" field to flag differences)
+######Quarterbacks
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+qbfinal <- data.frame(qbppg,qb[,2], by = "Player")
+qbfinal <- qbfinal[,-4]
+
+qbfinal$Comparison[qbfinal$Tier_PPG == qbfinal$Tier_Stat] <- ""
+qbfinal$Comparison[qbfinal$Tier_PPG != qbfinal$Tier_Stat] <- "Difference"
+
+qbfinal
+```
+
+######Running Backs
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+rbfinal <- data.frame(rbppg,rb[,2], by = "Player")
+rbfinal <- rbfinal[,-4]
+
+rbfinal$Comparison[rbfinal$Tier_PPG == rbfinal$Tier_Stat] <- ""
+rbfinal$Comparison[rbfinal$Tier_PPG != rbfinal$Tier_Stat] <- "Difference"
+
+rbfinal
+```
+
+######Wide Receivers
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+wrfinal <- data.frame(wrppg,wr[,2], by = "Player")
+wrfinal <- wrfinal[,-4]
+
+wrfinal$Comparison[wrfinal$Tier_PPG == wrfinal$Tier_Stat] <- ""
+wrfinal$Comparison[wrfinal$Tier_PPG != wrfinal$Tier_Stat] <- "Difference"
+
+wrfinal
+```
+
+######Tight Ends
+```{r, warning=FALSE, message=FALSE, error=FALSE, eval=TRUE}
+tefinal <- data.frame(teppg,te[,2], by = "Player")
+tefinal <- tefinal[,-4]
+
+tefinal$Comparison[tefinal$Tier_PPG == tefinal$Tier_Stat] <- ""
+tefinal$Comparison[tefinal$Tier_PPG != tefinal$Tier_Stat] <- "Difference"
+
+tefinal
+```
